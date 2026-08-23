@@ -169,9 +169,18 @@ int main(int argc, char** argv) {
 
     const std::string frame_path = "/tmp/cougar-lcd-live.png";
     unsigned frame = 0;
+    const auto frame_interval = std::chrono::milliseconds(options.interval_ms);
+    const auto steady_now = std::chrono::steady_clock::now();
+    const auto wall_now = std::chrono::system_clock::now();
+    auto next_frame = steady_now + frame_interval;
+    if (options.interval_ms == 1000) {
+        const auto next_wall_second =
+            std::chrono::time_point_cast<std::chrono::seconds>(wall_now) +
+            std::chrono::seconds(1) + std::chrono::milliseconds(100);
+        next_frame = steady_now + (next_wall_second - wall_now);
+    }
     std::cout << "COUGAR LCD live dashboard started.\n";
     while (!stop_requested.load()) {
-        const auto started = std::chrono::steady_clock::now();
         metrics = sample_metrics(cpu, amd, nvml, have_nvml);
         if (!cougar::render_dashboard(frame_path, metrics, options.font) ||
             !device.upload_png(frame_path)) {
@@ -192,9 +201,15 @@ int main(int argc, char** argv) {
                       << metrics.gpu_load << "%\n";
         }
         if (options.frames && frame >= options.frames) break;
-        const auto deadline = started + std::chrono::milliseconds(options.interval_ms);
-        while (!stop_requested.load() && std::chrono::steady_clock::now() < deadline) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        while (!stop_requested.load()) {
+            const auto now = std::chrono::steady_clock::now();
+            if (now >= next_frame) break;
+            std::this_thread::sleep_until(
+                std::min(next_frame, now + std::chrono::milliseconds(20)));
+        }
+        next_frame += frame_interval;
+        while (next_frame <= std::chrono::steady_clock::now()) {
+            next_frame += frame_interval;
         }
     }
     std::remove(frame_path.c_str());

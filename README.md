@@ -12,8 +12,11 @@ lighting or fans.
 
 ## Supported hardware
 
-The implementation is built for the LCD fitted to **COUGAR CFV235 Vision** and
-**CFV235 Mesh Vision**, and for the separately sold **CFV235 LCD Monitor**
+The implementation is built for the LCD fitted to
+[**COUGAR CFV235 Vision**](https://cougargaming.com/us/products/cases/cfv235-vision/)
+and [**CFV235 Mesh Vision**](https://cougargaming.com/us/products/cases/cfv235-mesh-vision/),
+and for the separately sold
+[**CFV235 LCD Monitor**](https://cougargaming.com/products/cases/cfv235-lcd-monitor/)
 add-on used across the CFV235 series.
 
 | Property | Tested value |
@@ -101,7 +104,7 @@ Open an elevated PowerShell window:
 ```powershell
 wsl --install -d Ubuntu
 winget install --interactive --exact --id dorssel.usbipd-win
-git clone https://github.com/roychowdhuryrohit-dev/cougarLCD.cpp.git
+git clone git@github.com:roychowdhuryrohit-dev/cougarLCD.cpp.git
 cd cougarLCD.cpp
 Set-ExecutionPolicy -Scope Process Bypass
 .\scripts\windows\Install.ps1 -Distro Ubuntu

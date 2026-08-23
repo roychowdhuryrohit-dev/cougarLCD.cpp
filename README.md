@@ -204,12 +204,42 @@ You can keep SignalRGB for lighting, but disable its system/hardware monitoring
 features and make sure AMD telemetry starts before SignalRGB. See
 [Troubleshooting](docs/TROUBLESHOOTING.md).
 
+### SignalRGB lighting coexistence
+
+The tested machine encountered a specific driver conflict: SignalRGB's HWiNFO
+monitoring path acquired a sensor driver before the AMD SDK, after which AMD's
+sample returned `Failed to get the CPU Parameters`. The project works around
+that race with explicit task ordering—without deleting or modifying any
+SignalRGB DLL:
+
+```powershell
+.\scripts\windows\Install-SignalRgbCoexistence.ps1
+```
+
+The opt-in installer backs up the affected startup/monitoring settings and
+creates the hidden `COUGAR LCD Sensor Startup Order` logon task. At sign-in it:
+
+1. Keeps `SignalRgb.Service` in manual-start mode and prevents the normal UI
+   autostart from racing ahead.
+2. Stops any stale `HWiNFO_*` driver instance; it does not delete the driver.
+3. Starts the AMD-signed logger with no console window.
+4. Waits for a fresh, valid CPU-temperature CSV sample.
+5. Starts SignalRGB's service and UI with SignalRGB hardware monitoring
+   disabled, leaving its lighting control available.
+6. Confirms the AMD CSV continues advancing after SignalRGB starts.
+
+Restart Windows after installation. If the standalone `COUGAR LCD AMD
+Telemetry` task already exists, the coexistence installer disables that task
+so there is only one owner of startup ordering. Diagnostics are written to
+`C:\ProgramData\CougarLCD\sensor-startup-order.log`.
+
 ## Uninstall
 
 From elevated PowerShell:
 
 ```powershell
 .\scripts\windows\Uninstall-AmdTelemetry.ps1   # only if installed
+.\scripts\windows\Uninstall-SignalRgbCoexistence.ps1  # only if installed
 .\scripts\windows\Uninstall.ps1
 ```
 
@@ -253,6 +283,21 @@ vendor kernel drivers from WSL.
 Without AMD CSV data it measures WSL's `/proc/stat`, not total Windows host
 load. When AMD CSV is live, the dashboard uses the SDK's per-core C0 residency
 as a host-load estimate.
+
+### How did this project get around the SignalRGB/HWiNFO conflict?
+
+It solved an initialization race, not a missing DLL. AMD's monitoring SDK and
+SignalRGB's HWiNFO-based monitoring competed for low-level sensor access. The
+working sequence is **AMD first, valid CSV second, SignalRGB lighting last**.
+
+`Install-SignalRgbCoexistence.ps1` disables SignalRGB's monitoring settings and
+normal automatic launch, then installs one elevated hidden logon task. That
+task stops stale HWiNFO drivers, starts the AMD logger, waits for actual data,
+starts SignalRGB, and verifies AMD data is still updating. SignalRGB lighting
+continues to work; its system-monitoring/fan-sensor feature remains disabled.
+No SignalRGB or HWiNFO binary is removed, renamed, or patched, so application
+updates remain serviceable and the change can be reversed with
+`Uninstall-SignalRgbCoexistence.ps1`.
 
 ### Can I use my own background or animation?
 

@@ -57,6 +57,21 @@ hardware monitoring while keeping lighting enabled. This project does not
 delete or patch SignalRGB DLLs because updates would restore them and binary
 tampering is brittle.
 
+For the tested task-ordering workaround, run from elevated PowerShell and then
+restart Windows:
+
+```powershell
+.\scripts\windows\Install-SignalRgbCoexistence.ps1
+Get-ScheduledTask -TaskName 'COUGAR LCD Sensor Startup Order'
+Get-Content C:\ProgramData\CougarLCD\sensor-startup-order.log -Tail 50
+```
+
+The success condition is not merely that both processes exist. The ordered
+task starts AMD first, waits for a valid CSV row, starts SignalRGB lighting,
+then verifies that the CSV continues growing. If `HWiNFO_*` remains
+`Stop Pending`, restart Windows and allow the ordered task to run before
+opening any other hardware monitor.
+
 ## A blank `cmd.exe` window appears at sign-in
 
 Re-run `Install.ps1`. Its scheduled action uses hidden, non-interactive
@@ -88,4 +103,3 @@ Reattach it with `Start-CougarLcd.ps1` afterward.
 - Stop COUGAR LCD Editor and any second instance of `cougar-lcd`.
 - Avoid detaching USB during the transfer.
 - Let systemd restart the service if a transfer was interrupted.
-

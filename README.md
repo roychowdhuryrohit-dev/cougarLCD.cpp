@@ -1,6 +1,6 @@
 # cougarLCD.cpp
 
-An unofficial C++ dashboard for the 9.16-inch LCD used in the COUGAR CFV235
+An unofficial C++ based controller for the 9.16-inch LCD used in the COUGAR CFV235
 case family. It provides a lightweight alternative to COUGAR LCD Editor for
 displaying a clock and live CPU/GPU information.
 

@@ -1,0 +1,15 @@
+[Unit]
+Description=Independent COUGAR CFV235 LCD dashboard
+Documentation=https://github.com/roychowdhuryrohit-dev/cougarLCD.cpp
+After=local-fs.target
+
+[Service]
+Type=simple
+EnvironmentFile=-/etc/default/cougar-lcd
+ExecStart=/usr/local/bin/cougar-lcd $COUGAR_LCD_ARGS
+Restart=on-failure
+RestartSec=5
+User=root
+
+[Install]
+WantedBy=multi-user.target

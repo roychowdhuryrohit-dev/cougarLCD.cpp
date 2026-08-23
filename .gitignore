@@ -1,0 +1,24 @@
+# Build products
+/build/
+/out/
+CMakeUserPresets.json
+*.obj
+*.o
+*.exe
+*.pdb
+*.ilk
+
+# Runtime output and private captures
+*.csv
+*.log
+*.png
+*.osd
+captures/
+
+# Editors and OS metadata
+.vs/
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+

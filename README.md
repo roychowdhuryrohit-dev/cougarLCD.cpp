@@ -1,105 +1,56 @@
 # cougarLCD.cpp
 
-An independent, asset-free C++ dashboard and USB transport for the **COUGAR
-CFV235-series 9.16-inch LCD monitor**. It replaces the display portion of
-COUGAR LCD Editor for the hardware documented below; it does not control case
-lighting or fans.
+An unofficial C++ dashboard for the 9.16-inch LCD used in the COUGAR CFV235
+case family. It provides a lightweight alternative to COUGAR LCD Editor for
+displaying a clock and live CPU/GPU information.
 
-> [!IMPORTANT]
-> This is an unofficial community project. It is not affiliated with or
-> endorsed by COUGAR. Keep COUGAR LCD Editor closed while this service owns the
-> display.
+This project only controls the LCD. Case lighting and fans remain under your
+normal RGB or motherboard software.
 
 ## Supported hardware
 
-The implementation is built for the LCD fitted to
-[**COUGAR CFV235 Vision**](https://cougargaming.com/us/products/cases/cfv235-vision/)
-and [**CFV235 Mesh Vision**](https://cougargaming.com/us/products/cases/cfv235-mesh-vision/),
-and for the separately sold
-[**CFV235 LCD Monitor**](https://cougargaming.com/products/cases/cfv235-lcd-monitor/)
-add-on used across the CFV235 series.
+The project supports the LCD included with:
 
-| Property | Tested value |
-|---|---|
-| Display | 9.16-inch, 1920 × 462 |
-| USB identity | COUGAR Inc. `VID_1D6B` / `PID_0126` |
-| HID usage | Vendor page `0xFF00`, usage `0x0001` |
-| HID reports | 1025-byte input and output reports |
-| Tested device build | app/firmware `V1.0.5`, SDK `V1.2.7`, hardware `V2.0` |
-| Tested host | Windows 11 with WSL2 Ubuntu 26.04 |
+- [COUGAR CFV235 Vision](https://cougargaming.com/us/products/cases/cfv235-vision/)
+- [COUGAR CFV235 Mesh Vision](https://cougargaming.com/us/products/cases/cfv235-mesh-vision/)
+- [COUGAR CFV235 LCD Monitor](https://cougargaming.com/products/cases/cfv235-lcd-monitor/)
 
-USB cannot distinguish CFV235 Vision from CFV235 Mesh Vision: both expose the
-same LCD module. COUGAR's product pages list the screen as 1920 × 462; some
-retail copy rounds it to 1920 × 460.
+The panel is 9.16 inches with a resolution of 1920 × 462. Its USB identity is
+`VID_1D6B/PID_0126` and it uses 1025-byte HID input and output reports.
 
-Do **not** select look-alike ThermalTake interfaces such as
-`VID_264A/PID_22C5`. They are different devices and are intentionally excluded.
+## Features
 
-## What it does
+- Live clock and date
+- CPU temperature and load
+- NVIDIA GPU temperature and load
+- Configurable brightness and refresh interval
+- Upload support for your own PNG image
+- Automatic startup through WSL and systemd
+- Native Windows read-only HID diagnostic tool
+- SignalRGB lighting coexistence on systems affected by sensor-driver conflicts
 
-- Renders a live 1920 × 462 dashboard entirely in C++—no bundled images or
-  proprietary fonts.
-- Shows time, CPU temperature/load, and NVIDIA GPU temperature/load.
-- Uploads PNG frames through the confirmed media transport used by the LCD.
-- Runs as a quiet WSL systemd service and reconnects after Windows sign-in.
-- Includes a native Windows **read-only** HID enumerator/logger.
-- Accepts a user-owned PNG with `--upload` without adding that asset to Git.
+The default dashboard is drawn in C++ with Cairo and system fonts. No COUGAR
+backgrounds, fonts, firmware, or other media assets are included.
 
-The live Linux/WSL client only implements commands observed and validated on
-the tested display: resume, brightness, and PNG media transport. It does not
-flash firmware, erase storage, or send guessed commands.
+## Requirements
 
-## Architecture
+For the live dashboard:
 
-```text
-Windows host metrics (optional AMD CSV)      NVIDIA WSL NVML
-                   \                            /
-                    WSL C++ renderer (Cairo)
-                              |
-                      PNG media transport
-                              |
-                  hidapi -> usbipd-win -> LCD
-```
-
-The USB device is attached to WSL with `usbipd-win`, so Windows and WSL cannot
-own it simultaneously. SignalRGB can still control lighting because the LCD
-USB interface is separate from the case's lighting controller.
-
-## Prerequisites
-
-### Required for the live dashboard
-
-- Windows 11 (Windows 10 with current WSL2 may work but is untested)
+- Windows 11
 - [WSL2](https://learn.microsoft.com/windows/wsl/install) with Ubuntu
 - [usbipd-win](https://github.com/dorssel/usbipd-win)
-- A connected COUGAR LCD exposing `1d6b:0126`
-- Inside WSL: CMake 3.20+, a C++17 compiler, Ninja, pkg-config, Cairo,
-  Fontconfig, hidapi-hidraw, and DejaVu fonts
+- The LCD connected by USB
 
-The installer installs the Ubuntu packages automatically.
+The installer adds the required Ubuntu development packages: CMake, Ninja,
+Cairo, Fontconfig, hidapi, and DejaVu fonts.
 
-### Optional Windows diagnostic build
+The Windows diagnostic tool is optional. Building it requires Visual Studio or
+Build Tools for Visual Studio with the **Desktop development with C++**
+workload. The free Build Tools edition is sufficient.
 
-- Visual Studio 2022 or **Build Tools for Visual Studio 2022**
-- The `Desktop development with C++` workload and CMake component
+## Install
 
-A paid Visual Studio license is not required merely to build this open-source
-project with the free Build Tools; follow Microsoft's license terms for your
-organization and usage.
-
-### Optional metrics
-
-- NVIDIA GPU: the normal NVIDIA Windows driver with WSL GPU support; the client
-  loads WSL's NVML library dynamically.
-- AMD Ryzen CPU temperature: the official **AMD Ryzen Master Monitoring SDK**.
-  The repository does not download or redistribute AMD software.
-
-Without the AMD bridge, CPU load uses `/proc/stat` (WSL activity) and CPU
-temperature displays `-- °C`. GPU values display `-- °C` if NVML is unavailable.
-
-## Quick install
-
-Open an elevated PowerShell window:
+Open PowerShell as Administrator:
 
 ```powershell
 wsl --install -d Ubuntu
@@ -110,18 +61,19 @@ Set-ExecutionPolicy -Scope Process Bypass
 .\scripts\windows\Install.ps1 -Distro Ubuntu
 ```
 
-If your distribution has a versioned name, use it exactly—for example
-`-Distro Ubuntu-26.04`. `Install.ps1` does the following:
+If your Ubuntu installation has a versioned name, use that exact name. For
+example:
 
-1. Builds and tests the Linux executable in WSL.
-2. Installs `cougar-lcd` and its systemd unit.
-3. Binds only USB hardware ID `1d6b:0126` to usbipd-win.
-4. Creates one hidden logon task to attach USB and restart the WSL service.
-5. Starts the dashboard immediately.
+```powershell
+.\scripts\windows\Install.ps1 -Distro Ubuntu-26.04
+```
 
-It creates no Desktop shortcuts and no visible startup terminal.
+The installer builds the WSL client, installs its systemd service, shares the
+LCD with WSL through usbipd-win, and creates a hidden logon task that reconnects
+the display after a restart. It does not create Desktop shortcuts or visible
+startup terminals.
 
-Verify it:
+Check the service with:
 
 ```powershell
 wsl -d Ubuntu -- systemctl status cougar-lcd --no-pager
@@ -130,197 +82,174 @@ wsl -d Ubuntu -- journalctl -u cougar-lcd -n 50 --no-pager
 
 ## Build manually
 
-### WSL / Linux client
+### WSL client
 
 ```bash
 sudo apt update
 sudo apt install build-essential cmake ninja-build pkg-config \
   libcairo2-dev libfontconfig1-dev libhidapi-dev fonts-dejavu-core
+
 cmake -S . -B build/wsl -G Ninja -DCMAKE_BUILD_TYPE=Release
 cmake --build build/wsl
 ctest --test-dir build/wsl --output-on-failure
 ```
 
-Safe tests that do not write to USB:
+Render a local test image without accessing USB:
 
 ```bash
 ./build/wsl/src/linux/cougar-lcd --render-only /tmp/dashboard.png
+```
+
+List compatible LCD interfaces without sending any reports:
+
+```bash
 ./build/wsl/src/linux/cougar-lcd --probe
 ```
 
-The first command performs no USB access. `--probe` enumerates the target but
-sends no reports.
-
-### Windows diagnostic probe
-
-From PowerShell:
+### Windows diagnostic tool
 
 ```powershell
 .\scripts\windows\Build.ps1
 .\build\windows-x64\tools\windows\Release\cougar-hid-probe.exe
 ```
 
-To passively capture input for ten seconds:
+The Windows tool is read-only. It can also capture incoming reports for a
+limited time:
 
 ```powershell
 .\build\windows-x64\tools\windows\Release\cougar-hid-probe.exe --listen-ms 10000
 ```
 
-The Windows tool contains no write path. Close the WSL service and detach the
-device first if Windows cannot see it.
-
 ## Usage
 
-```text
+The installed service starts the live dashboard automatically. Common manual
+commands are:
+
+```bash
 cougar-lcd --probe
 cougar-lcd --render-only /tmp/frame.png
-cougar-lcd --upload /path/to/your-own-1920x462.png
+cougar-lcd --upload /path/to/your-image.png
 cougar-lcd --brightness 65 --interval-ms 1500
 ```
 
-For persistent options, edit `/etc/default/cougar-lcd` in WSL:
+Persistent service options are stored in `/etc/default/cougar-lcd`:
 
 ```bash
 COUGAR_LCD_ARGS="--quiet --brightness 65 --interval-ms 1500"
 sudo systemctl restart cougar-lcd
 ```
 
-An optional font can be supplied with `--font /path/to/font.ttf`. No font or
-media asset is included in this repository.
+Your own font can be selected with `--font /path/to/font.ttf`.
 
-## AMD CPU temperature
+## Temperature monitoring
 
-Install the official AMD Ryzen Master Monitoring SDK, then run from elevated
-PowerShell:
+NVIDIA GPU values are read through the NVML library supplied by the Windows
+NVIDIA driver for WSL.
+
+Windows does not provide a general CPU-temperature API. On supported AMD Ryzen
+systems, install the official AMD Ryzen Master Monitoring SDK and then run:
 
 ```powershell
 .\scripts\windows\Install-AmdTelemetry.ps1
 ```
 
-The script validates AMD's Authenticode signature, starts AMD's installed
-sample logger without a console window, and writes CSV files under
-`C:\ProgramData\CougarLCD`. The WSL client reads only fresh matching CSV files.
+The AMD logger writes its readings to `C:\ProgramData\CougarLCD`. The WSL
+service reads the newest active CSV file. The AMD SDK itself is not included in
+this repository.
 
-Ryzen monitoring drivers can be exclusive. HWiNFO, Fan Control, motherboard
-tools, or SignalRGB hardware monitoring may prevent AMD telemetry from opening.
-You can keep SignalRGB for lighting, but disable its system/hardware monitoring
-features and make sure AMD telemetry starts before SignalRGB. See
-[Troubleshooting](docs/TROUBLESHOOTING.md).
+Without AMD telemetry, CPU temperature displays `-- °C` and CPU load is based
+on WSL activity. GPU values display `-- °C` when NVML is unavailable.
 
-### SignalRGB lighting coexistence
+## Using SignalRGB for lighting
 
-The tested machine encountered a specific driver conflict: SignalRGB's HWiNFO
-monitoring path acquired a sensor driver before the AMD SDK, after which AMD's
-sample returned `Failed to get the CPU Parameters`. The project works around
-that race with explicit task ordering—without deleting or modifying any
-SignalRGB DLL:
+Some systems cannot start AMD telemetry after SignalRGB's hardware-monitoring
+driver has loaded. SignalRGB lighting can still be used by disabling its
+hardware monitoring and starting the programs in the correct order:
+
+1. Start AMD telemetry.
+2. Wait for a valid temperature sample.
+3. Start SignalRGB with hardware monitoring disabled.
+
+The included installer configures this automatically:
 
 ```powershell
 .\scripts\windows\Install-SignalRgbCoexistence.ps1
 ```
 
-The opt-in installer backs up the affected startup/monitoring settings and
-creates the hidden `COUGAR LCD Sensor Startup Order` logon task. At sign-in it:
+It creates a hidden logon task named `COUGAR LCD Sensor Startup Order`. The task
+stops any stale HWiNFO sensor driver, starts the AMD logger, waits for a valid
+CSV sample, starts SignalRGB, and checks that AMD readings continue afterward.
+SignalRGB lighting remains available.
 
-1. Keeps `SignalRgb.Service` in manual-start mode and prevents the normal UI
-   autostart from racing ahead.
-2. Stops any stale `HWiNFO_*` driver instance; it does not delete the driver.
-3. Starts the AMD-signed logger with no console window.
-4. Waits for a fresh, valid CPU-temperature CSV sample.
-5. Starts SignalRGB's service and UI with SignalRGB hardware monitoring
-   disabled, leaving its lighting control available.
-6. Confirms the AMD CSV continues advancing after SignalRGB starts.
+The script backs up the settings it changes. It does not delete or modify
+SignalRGB or HWiNFO files. To restore the previous startup and monitoring
+settings:
 
-Restart Windows after installation. If the standalone `COUGAR LCD AMD
-Telemetry` task already exists, the coexistence installer disables that task
-so there is only one owner of startup ordering. Diagnostics are written to
-`C:\ProgramData\CougarLCD\sensor-startup-order.log`.
+```powershell
+.\scripts\windows\Uninstall-SignalRgbCoexistence.ps1
+```
+
+The ordering log is stored at:
+
+```text
+C:\ProgramData\CougarLCD\sensor-startup-order.log
+```
 
 ## Uninstall
 
-From elevated PowerShell:
+Run the installers you used in reverse order from PowerShell as Administrator:
 
 ```powershell
-.\scripts\windows\Uninstall-AmdTelemetry.ps1   # only if installed
-.\scripts\windows\Uninstall-SignalRgbCoexistence.ps1  # only if installed
+.\scripts\windows\Uninstall-SignalRgbCoexistence.ps1
+.\scripts\windows\Uninstall-AmdTelemetry.ps1
 .\scripts\windows\Uninstall.ps1
 ```
 
-The default uninstall preserves the built binary, USB binding, SDK, and metric
-CSV files. Pass `-RemoveConfiguration` to remove `C:\ProgramData\CougarLCD` as
-well. To remove the Linux binary manually:
-
-```powershell
-wsl -d Ubuntu -u root -- rm -f /usr/local/bin/cougar-lcd
-```
+The main uninstaller disables the service and removes its startup task. It
+keeps the installed binary, USB binding, AMD SDK, and CSV data unless you pass
+`-RemoveConfiguration`.
 
 ## FAQ
 
-### Why use WSL instead of a native Windows live client?
-
-The original failure was in the Electron/node-hid/HIDAPI read lifecycle. The
-working replacement gives one long-lived native C++ process sole ownership of
-the interface through Linux hidraw. WSL is a practical isolation boundary and
-also avoids Windows application-control trouble with an unsigned helper.
-
 ### Can COUGAR LCD Editor run at the same time?
 
-No. Two clients racing for the same HID interface can corrupt transfers or
-reproduce lifecycle problems. Exit COUGAR LCD Editor before attaching the LCD
-to WSL.
-
-### Is the Windows probe safe?
-
-Yes. It opens HID interfaces with zero access for enumeration or
-`GENERIC_READ` for optional logging. There is no `WriteFile`, output-report, or
-feature-report operation in that target.
+No. Close COUGAR LCD Editor before attaching the LCD to WSL. Only one program
+should control the HID interface at a time.
 
 ### Why is CPU temperature blank?
 
-Windows does not expose a universal CPU-temperature API. Install the AMD bridge
-for supported Ryzen systems, or contribute another opt-in provider. Never load
-vendor kernel drivers from WSL.
+Install and start the AMD telemetry bridge on a supported Ryzen system. Check
+that the newest `RMSDK_Parameter_log_cougar_*.csv` file in
+`C:\ProgramData\CougarLCD` is still updating.
 
-### Why is CPU load different from Task Manager?
+### Why does CPU load differ from Task Manager?
 
-Without AMD CSV data it measures WSL's `/proc/stat`, not total Windows host
-load. When AMD CSV is live, the dashboard uses the SDK's per-core C0 residency
-as a host-load estimate.
+Without AMD telemetry, the program reads WSL's `/proc/stat`, which measures WSL
+activity rather than total Windows activity. With AMD telemetry running, it
+uses the SDK's core residency readings.
 
-### How did this project get around the SignalRGB/HWiNFO conflict?
+### How does the SignalRGB workaround work?
 
-It solved an initialization race, not a missing DLL. AMD's monitoring SDK and
-SignalRGB's HWiNFO-based monitoring competed for low-level sensor access. The
-working sequence is **AMD first, valid CSV second, SignalRGB lighting last**.
+The AMD monitoring SDK and SignalRGB's HWiNFO-based monitoring can compete for
+sensor access. The scheduled task gives AMD the first opportunity to initialize
+and produce a valid reading. SignalRGB starts afterward with its monitoring
+features disabled, while its lighting controls continue to run.
 
-`Install-SignalRgbCoexistence.ps1` disables SignalRGB's monitoring settings and
-normal automatic launch, then installs one elevated hidden logon task. That
-task stops stale HWiNFO drivers, starts the AMD logger, waits for actual data,
-starts SignalRGB, and verifies AMD data is still updating. SignalRGB lighting
-continues to work; its system-monitoring/fan-sensor feature remains disabled.
-No SignalRGB or HWiNFO binary is removed, renamed, or patched, so application
-updates remain serviceable and the change can be reversed with
-`Uninstall-SignalRgbCoexistence.ps1`.
+### Why is the display blank after restarting Windows?
 
-### Can I use my own background or animation?
+Check `usbipd list` and the `cougar-lcd` systemd status. The most common causes
+are a USB device that was not reattached, a changed WSL distribution name, or
+COUGAR LCD Editor still running.
 
-`--upload` accepts your own PNG. The built-in live view is generated in code.
-Video and arbitrary animation formats have not been protocol-validated and are
-not implemented.
+### Can I display my own image?
 
-### Does the service keep growing CSV files forever?
+Yes. Use a PNG sized for the 1920 × 462 panel:
 
-The AMD sample logger creates long-running CSV output. Stop/restart its task
-periodically or archive/delete old CSV files while the logger is stopped. The
-LCD client always chooses the newest fresh matching file.
+```bash
+cougar-lcd --upload /path/to/your-image.png
+```
 
-### The display is blank after reboot—what should I check?
-
-Run `usbipd list`, then inspect the WSL service and journal commands shown
-above. Most reboot failures are a missing USB attachment, a renamed WSL distro,
-or the LCD still being owned by COUGAR LCD Editor.
-
-## Documentation
+## More information
 
 - [Protocol notes](docs/PROTOCOL.md)
 - [Troubleshooting](docs/TROUBLESHOOTING.md)
@@ -329,5 +258,5 @@ or the LCD still being owned by COUGAR LCD Editor.
 
 ## License
 
-MIT. See [LICENSE](LICENSE). Product names and trademarks belong to their
-respective owners. No COUGAR or AMD assets are distributed.
+This project is available under the [MIT License](LICENSE). COUGAR, AMD,
+NVIDIA, SignalRGB, and HWiNFO are trademarks of their respective owners.

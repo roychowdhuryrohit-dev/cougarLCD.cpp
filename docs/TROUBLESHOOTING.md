@@ -1,6 +1,6 @@
 # Troubleshooting
 
-## No display after reboot
+## No display after restarting Windows or WSL
 
 In elevated PowerShell:
 
@@ -19,6 +19,8 @@ Use your actual distro name. If `1d6b:0126` is not attached, run:
 
 Close COUGAR LCD Editor first. After a usbipd-win upgrade or physical USB port
 change, an elevated `usbipd bind --hardware-id 1d6b:0126` may be needed again.
+The service checks USB visibility inside WSL and automatically repairs the
+stale Attached state that can remain after `wsl --shutdown`.
 
 ## `No VID_1D6B/PID_0126 HID interface is visible`
 

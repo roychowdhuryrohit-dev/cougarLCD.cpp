@@ -235,11 +235,12 @@ sensor access. The scheduled task gives AMD the first opportunity to initialize
 and produce a valid reading. SignalRGB starts afterward with its monitoring
 features disabled, while its lighting controls continue to run.
 
-### Why is the display blank after restarting Windows?
+### Why is the display blank after restarting Windows or WSL?
 
 Check `usbipd list` and the `cougar-lcd` systemd status. The most common causes
 are a USB device that was not reattached, a changed WSL distribution name, or
-COUGAR LCD Editor still running.
+COUGAR LCD Editor still running. The systemd service verifies the device from
+inside WSL and repairs a stale usbipd attachment before starting the display.
 
 ### Can I display my own image?
 

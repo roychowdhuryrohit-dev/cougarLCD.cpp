@@ -58,6 +58,8 @@ Windows (VS Build Tools shell or PowerShell with CMake available):
 Run hardware writes only when explicitly requested, the COUGAR editor is
 closed, and `--probe` confirms `1d6b:0126`. Keep install scripts unattended,
 idempotent, path-independent, and free of visible console windows at logon.
+Keep the systemd `ExecStartPre` USB visibility check: Windows may report a stale
+Attached state after WSL restarts even though no HID interface exists in WSL.
 
 ## Layout
 

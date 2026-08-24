@@ -12,7 +12,7 @@ fi
 sudo apt-get update
 sudo apt-get install -y --no-install-recommends \
     build-essential cmake ninja-build pkg-config \
-    libcairo2-dev libfontconfig1-dev libhidapi-dev fonts-dejavu-core
+    libcairo2-dev libfontconfig1-dev libhidapi-dev fonts-dejavu-core usbutils
 
 cmake -S "${repo_root}" -B "${build_dir}" -G Ninja \
     -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
@@ -23,6 +23,9 @@ sudo cmake --install "${build_dir}"
 sudo install -D -m 0644 \
     "${repo_root}/packaging/systemd/cougar-lcd.service" \
     /etc/systemd/system/cougar-lcd.service
+sudo install -D -m 0755 \
+    "${repo_root}/packaging/systemd/ensure-usb.sh" \
+    /usr/local/libexec/cougar-lcd/ensure-usb.sh
 if [[ ! -e /etc/default/cougar-lcd ]]; then
     printf '%s\n' 'COUGAR_LCD_ARGS="--quiet"' | \
         sudo tee /etc/default/cougar-lcd >/dev/null
@@ -33,4 +36,3 @@ sudo systemctl enable cougar-lcd.service
 echo
 echo "Installed /usr/local/bin/cougar-lcd and enabled cougar-lcd.service."
 echo "The Windows-side installer will attach USB and start the service."
-

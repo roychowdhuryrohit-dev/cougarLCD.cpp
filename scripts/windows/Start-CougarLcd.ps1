@@ -26,5 +26,11 @@ if ($attachResult -ne 0 -and ($attachOutput -join "`n") -notmatch 'already attac
 }
 
 Start-Sleep -Seconds 2
+& wsl.exe -d $Distro -- sh -lc 'lsusb -d 1d6b:0126 >/dev/null 2>&1'
+if ($LASTEXITCODE -ne 0) {
+    # usbipd-win can report Attached after WSL restarts while the new VM has no
+    # USB interface. Let the systemd pre-start check repair that stale state.
+    Write-Verbose 'The USB attachment is stale; the WSL service will repair it.'
+}
 & wsl.exe -d $Distro -u root -- systemctl restart cougar-lcd.service
 if ($LASTEXITCODE -ne 0) { throw 'The WSL service did not start.' }

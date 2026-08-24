@@ -6,6 +6,7 @@ After=local-fs.target
 [Service]
 Type=simple
 EnvironmentFile=-/etc/default/cougar-lcd
+ExecStartPre=/usr/local/libexec/cougar-lcd/ensure-usb.sh
 ExecStart=/usr/local/bin/cougar-lcd $COUGAR_LCD_ARGS
 Restart=on-failure
 RestartSec=5

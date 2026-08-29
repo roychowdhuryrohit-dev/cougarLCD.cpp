@@ -70,8 +70,8 @@ example:
 
 The installer builds the WSL client, installs its systemd service, shares the
 LCD with WSL through usbipd-win, and creates a hidden logon task that reconnects
-the display after a restart. It does not create Desktop shortcuts or visible
-startup terminals.
+the display after a restart and keeps the WSL service running. It does not
+create Desktop shortcuts or visible startup terminals.
 
 Check the service with:
 

@@ -62,14 +62,14 @@ $taskName = 'COUGAR LCD WSL Service'
 $launcher = Join-Path $installDirectory 'Start-CougarLcd.ps1'
 $action = New-ScheduledTaskAction `
     -Execute "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe" `
-    -Argument "-NoProfile -NonInteractive -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$launcher`""
+    -Argument "-NoProfile -NonInteractive -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$launcher`" -KeepAlive"
 $trigger = New-ScheduledTaskTrigger -AtLogOn
 $principal = New-ScheduledTaskPrincipal -UserId `
     ([Security.Principal.WindowsIdentity]::GetCurrent().Name) `
     -LogonType Interactive -RunLevel Highest
 $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries `
     -DontStopIfGoingOnBatteries -StartWhenAvailable `
-    -MultipleInstances IgnoreNew -ExecutionTimeLimit (New-TimeSpan -Minutes 2)
+    -MultipleInstances IgnoreNew -ExecutionTimeLimit ([TimeSpan]::Zero) -Hidden
 $task = New-ScheduledTask -Action $action -Trigger $trigger -Principal $principal `
     -Settings $settings -Description 'Attaches the COUGAR LCD to WSL and starts its service.'
 Register-ScheduledTask -TaskName $taskName -InputObject $task -Force | Out-Null

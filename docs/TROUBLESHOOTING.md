@@ -17,6 +17,11 @@ Use your actual distro name. If `1d6b:0126` is not attached, run:
 .\scripts\windows\Start-CougarLcd.ps1 -Distro Ubuntu
 ```
 
+The installed `COUGAR LCD WSL Service` task normally remains in the `Running`
+state. Its hidden WSL client prevents the distro from stopping when no terminal
+is open. Restart that task if it is unexpectedly `Ready` while the display is
+supposed to be active.
+
 Close COUGAR LCD Editor first. After a usbipd-win upgrade or physical USB port
 change, an elevated `usbipd bind --hardware-id 1d6b:0126` may be needed again.
 The service checks USB visibility inside WSL and automatically repairs the

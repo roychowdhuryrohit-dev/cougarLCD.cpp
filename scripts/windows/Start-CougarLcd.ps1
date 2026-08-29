@@ -1,6 +1,7 @@
 [CmdletBinding()]
 param(
-    [string] $Distro
+    [string] $Distro,
+    [switch] $KeepAlive
 )
 
 $ErrorActionPreference = 'Stop'
@@ -34,3 +35,13 @@ if ($LASTEXITCODE -ne 0) {
 }
 & wsl.exe -d $Distro -u root -- systemctl restart cougar-lcd.service
 if ($LASTEXITCODE -ne 0) { throw 'The WSL service did not start.' }
+
+if ($KeepAlive) {
+    # A Windows-side WSL client prevents the distro and its systemd services
+    # from being stopped when no interactive WSL terminal is open. If WSL is
+    # deliberately shut down, reconnect after a short delay.
+    while ($true) {
+        & wsl.exe -d $Distro --cd / -- sh -lc 'exec sleep infinity'
+        Start-Sleep -Seconds 2
+    }
+}

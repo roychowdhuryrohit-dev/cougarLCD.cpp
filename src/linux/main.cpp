@@ -23,6 +23,14 @@ void on_signal(int) {
     stop_requested.store(true);
 }
 
+[[noreturn]] void exit_after_transport_failure() {
+    // hidapi cleanup can block indefinitely after a failed USB transaction.
+    // Let the kernel close the hidraw descriptor so systemd can restart us.
+    std::cout.flush();
+    std::cerr.flush();
+    std::_Exit(EXIT_FAILURE);
+}
+
 struct Options {
     bool probe = false;
     bool render_only = false;
@@ -162,9 +170,12 @@ int main(int argc, char** argv) {
     std::signal(SIGTERM, on_signal);
     cougar::HidTransport device;
     if (!device.open(options.serial)) return 1;
-    if (!device.set_brightness(options.brightness) || !device.resume()) return 1;
+    if (!device.set_brightness(options.brightness) || !device.resume()) {
+        exit_after_transport_failure();
+    }
     if (!options.upload_path.empty()) {
-        return device.upload_png(options.upload_path) ? 0 : 1;
+        if (!device.upload_png(options.upload_path)) exit_after_transport_failure();
+        return 0;
     }
 
     const std::string frame_path = "/tmp/cougar-lcd-live.png";
@@ -186,7 +197,7 @@ int main(int argc, char** argv) {
             !device.upload_png(frame_path)) {
             std::cerr << "Live frame render/upload failed.\n";
             std::remove(frame_path.c_str());
-            return 1;
+            exit_after_transport_failure();
         }
         ++frame;
         if (!options.quiet) {

@@ -61,7 +61,10 @@ idempotent, path-independent, and free of visible console windows at logon.
 Keep the systemd `ExecStartPre` USB visibility check: Windows may report a stale
 Attached state after WSL restarts even though no HID interface exists in WSL.
 Keep the Windows launcher task's hidden `-KeepAlive` loop and unlimited task
-duration; otherwise WSL may stop the dashboard when no terminal is open.
+duration; otherwise WSL may stop the dashboard when no terminal is open. The
+loop must periodically repair `/mnt/c`, attach USB from Windows, and verify the
+systemd service because the Linux pre-start helper cannot repair USB while its
+Windows-drive mount is stale.
 
 ## Layout
 

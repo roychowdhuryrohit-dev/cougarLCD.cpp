@@ -19,29 +19,63 @@ if (-not $usbipdPath) {
 }
 if (-not $usbipdPath) { throw 'usbipd-win is not installed.' }
 
-# Binding is persistent; attachment must be repeated after a Windows restart.
-$attachOutput = @(& $usbipdPath attach --wsl $Distro --hardware-id 1d6b:0126 2>&1)
-$attachResult = $LASTEXITCODE
-if ($attachResult -ne 0 -and ($attachOutput -join "`n") -notmatch 'already attached') {
-    throw "USB attachment failed: $($attachOutput -join ' ')"
+function Test-CougarUsbVisible {
+    & wsl.exe -d $Distro --cd / -- sh -lc `
+        'lsusb -d 1d6b:0126 >/dev/null 2>&1'
+    $LASTEXITCODE -eq 0
 }
 
-Start-Sleep -Seconds 2
-& wsl.exe -d $Distro -- sh -lc 'lsusb -d 1d6b:0126 >/dev/null 2>&1'
-if ($LASTEXITCODE -ne 0) {
-    # usbipd-win can report Attached after WSL restarts while the new VM has no
-    # USB interface. Let the systemd pre-start check repair that stale state.
-    Write-Verbose 'The USB attachment is stale; the WSL service will repair it.'
+function Repair-WindowsMount {
+    & wsl.exe -d $Distro --cd / -- sh -lc `
+        'mountpoint -q /mnt/c && test -d /mnt/c/Windows/System32' 2>$null
+    if ($LASTEXITCODE -eq 0) { return }
+
+    & wsl.exe -d $Distro -u root --cd / -- sh -lc `
+        'umount -l /mnt/c 2>/dev/null || true; mkdir -p /mnt/c; mount -t drvfs C: /mnt/c -o metadata,uid=1000,gid=1000,umask=22,fmask=11'
+    if ($LASTEXITCODE -ne 0) { throw 'The WSL /mnt/c mount could not be repaired.' }
 }
+
+function Connect-CougarUsb {
+    if (Test-CougarUsbVisible) { return }
+
+    # Binding is persistent; attachment must be repeated for each WSL VM.
+    $attachOutput = @(& $usbipdPath attach --wsl $Distro `
+        --hardware-id 1d6b:0126 2>&1)
+    Start-Sleep -Seconds 2
+    if (Test-CougarUsbVisible) { return }
+
+    # Repair a stale Windows Attached state when the new WSL VM has no device.
+    $null = & $usbipdPath detach --hardware-id 1d6b:0126 2>&1
+    Start-Sleep -Seconds 2
+    $attachOutput = @(& $usbipdPath attach --wsl $Distro `
+        --hardware-id 1d6b:0126 2>&1)
+    Start-Sleep -Seconds 2
+    if (-not (Test-CougarUsbVisible)) {
+        throw "USB attachment failed: $($attachOutput -join ' ')"
+    }
+}
+
+Repair-WindowsMount
+Connect-CougarUsb
 & wsl.exe -d $Distro -u root -- systemctl restart cougar-lcd.service
 if ($LASTEXITCODE -ne 0) { throw 'The WSL service did not start.' }
 
 if ($KeepAlive) {
-    # A Windows-side WSL client prevents the distro and its systemd services
-    # from being stopped when no interactive WSL terminal is open. If WSL is
-    # deliberately shut down, reconnect after a short delay.
     while ($true) {
-        & wsl.exe -d $Distro --cd / -- sh -lc 'exec sleep infinity'
-        Start-Sleep -Seconds 2
+        # Keep a Windows-side client active, but return periodically to repair
+        # stale 9P mounts and USB state after sleep, resume, or WSL shutdown.
+        & wsl.exe -d $Distro --cd / -- /usr/bin/sleep 30
+        Start-Sleep -Seconds 1
+        try {
+            Repair-WindowsMount
+            Connect-CougarUsb
+            & wsl.exe -d $Distro -u root -- systemctl is-active --quiet cougar-lcd.service
+            if ($LASTEXITCODE -ne 0) {
+                & wsl.exe -d $Distro -u root -- systemctl restart cougar-lcd.service
+            }
+        } catch {
+            Write-Warning "COUGAR LCD health check failed: $($_.Exception.Message)"
+            Start-Sleep -Seconds 5
+        }
     }
 }
